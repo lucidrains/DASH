@@ -1,6 +1,6 @@
 ## DASH (wip)
 
-Implementation of DASH, Warm-Starting Neural Network Training in Stationary Settings without Loss of Plasticity
+Implementation of DASH, [Warm-Starting Neural Network Training in Stationary Settings without Loss of Plasticity](https://arxiv.org/abs/2410.23495)
 
 ## Citations
 
