@@ -13,3 +13,7 @@ def test_dash():
 
     optim.step()
     optim.zero_grad()
+
+    optim.shrink_params()
+
+    optim.clear_grad_ema()

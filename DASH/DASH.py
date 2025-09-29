@@ -4,12 +4,19 @@ from typing import Callable
 from functools import partial
 
 import torch
+import torch.nn.functional as F
 from torch.optim.optimizer import Optimizer
+
+from einops import pack
 
 # functions
 
 def exists(val):
     return val is not None
+
+def append_dims(t, ndim):
+    shape = t.shape
+    return t.reshape(*shape, *((1,) * ndim))
 
 # class
 
@@ -19,6 +26,7 @@ class AdamW(Optimizer):
         params,
         lr = 1e-4,
         betas: tuple[float, float] = (0.9, 0.99),
+        min_shrink_thres = 0.3, # the minimum shrinkage for the params, compared to the cosine similarity of the -gradients with the parameters
         weight_decay = 0.,
         eps = 1e-8,
         regen_reg_rate = 0.,
@@ -30,7 +38,7 @@ class AdamW(Optimizer):
         assert weight_decay >= 0.
         assert regen_reg_rate >= 0.
         assert eps > 0.
-        assert not (weight_decay >0. and regen_reg_rate > 0.), 'weight decay and regenerative regularization cannot be used together'
+        assert not (weight_decay > 0. and regen_reg_rate > 0.), 'weight decay and regenerative regularization cannot be used together'
 
         self._init_lr = lr
 
@@ -41,7 +49,8 @@ class AdamW(Optimizer):
             weight_decay = weight_decay,
             regen_reg_rate = regen_reg_rate,
             grad_ema = grad_ema,
-            grad_ema_decay = grad_ema_decay
+            grad_ema_decay = grad_ema_decay,
+            min_shrink_thres = min_shrink_thres
         )
 
         super().__init__(params, defaults)
@@ -59,6 +68,32 @@ class AdamW(Optimizer):
             for p in filter(lambda p: exists(p.grad), group['params']):
                 state = self.state[p]
                 state.pop('grad_ema', None)
+
+    @torch.no_grad()
+    def shrink_params(self):
+        for group in self.param_groups:
+            min_shrink_thres = group['min_shrink_thres']
+
+            for p in group['params']:
+                state = self.state[p]
+                grad_ema = state.get('grad_ema', None)
+
+                if not exists(grad_ema):
+                    continue
+
+                # algorithm 1 - direction-aware shrinking (dash)
+
+                neg_gradient = -grad_ema
+
+                packed_neg_gradient, _ = pack([neg_gradient], 'o *')
+                packed_params, _ = pack([p.data], 'o *')
+
+                shrink_factor = F.cosine_similarity(packed_neg_gradient, packed_params, dim = -1)
+                shrink_factor.clamp_(min = min_shrink_thres)
+
+                shrink_factor_to_broadcast = append_dims(shrink_factor, p.ndim - 1)
+
+                p.mul_(shrink_factor_to_broadcast)
 
     @torch.no_grad()
     def step(
