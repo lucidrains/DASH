@@ -5,6 +5,8 @@ from functools import partial
 
 import torch
 import torch.nn.functional as F
+from torch.nn import Module
+from torch.utils.data import Dataset, DataLoader
 from torch.optim.optimizer import Optimizer
 
 from einops import pack
@@ -98,7 +100,8 @@ class AdamW(Optimizer):
     @torch.no_grad()
     def step(
         self,
-        closure: Callable | None = None
+        closure: Callable | None = None,
+        only_update_grad_ema = False
     ):
 
         loss = None
@@ -157,6 +160,11 @@ class AdamW(Optimizer):
 
                     grad_ema.lerp_(grad, 1. - grad_ema_decay)
 
+                # only updating grad ema for shrinking
+
+                if only_update_grad_ema:
+                    continue
+
                 # bias corrections
 
                 bias_correct1 = 1. - beta1 ** steps
@@ -178,3 +186,24 @@ class AdamW(Optimizer):
                 state['steps'] = steps
 
         return loss
+
+# shrink from dataset
+
+def shrink_params_with_dataset_(
+    network: Module,
+    optim: AdamW,
+    dataset: Dataset,
+    batch_size = 16
+):
+    dl = DataLoader(dataset, batch_size = batch_size)
+
+    optim.clear_grad_ema()
+
+    for batches in dl:
+        loss = network(dl)
+        loss.backward()
+
+        optim.step(only_update_grad_ema = True)
+        optim.zero_grad()
+
+    optim.shrink_params()

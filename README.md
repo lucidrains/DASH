@@ -4,6 +4,33 @@
 
 Implementation of DASH, [Warm-Starting Neural Network Training in Stationary Settings without Loss of Plasticity](https://arxiv.org/abs/2410.23495)
 
+## Install
+
+```bash
+$ pip install DASH-pytorch
+```
+
+## Usage
+
+```python
+import torch
+from torch.nn import Linear
+
+from DASH.DASH import AdamW
+
+net = Linear(10, 5)
+optim = AdamW(net.parameters(), lr = 3e-4)
+
+loss = net(torch.randn(10)).sum()
+loss.backward()
+
+optim.step()
+optim.zero_grad()
+
+optim.shrink_params()
+optim.clear_grad_ema()
+```
+
 ## Citations
 
 ```bibtex

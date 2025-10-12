@@ -1,5 +1,5 @@
 [project]
-name = "DASH"
+name = "DASH-pytorch"
 version = "0.0.1"
 description = "DASH"
 authors = [
@@ -40,7 +40,7 @@ test = [
 
 [tool.pytest.ini_options]
 pythonpath = [
-  "."
+    "."
 ]
 
 [build-system]
