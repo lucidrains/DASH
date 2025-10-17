@@ -16,7 +16,7 @@ $ pip install DASH-pytorch
 import torch
 from torch.nn import Linear
 
-from DASH.DASH import AdamW
+from DASH import AdamW
 
 net = Linear(10, 5)
 optim = AdamW(net.parameters(), lr = 3e-4)
@@ -29,6 +29,14 @@ optim.zero_grad()
 
 optim.shrink_params()
 optim.clear_grad_ema()
+```
+
+Or, with a given dataset
+
+```python
+from DASH import shrink_params_with_dataset_
+
+shrink_params_with_dataset_(net, dataset)
 ```
 
 ## Citations
