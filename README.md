@@ -1,6 +1,6 @@
 <img src="./dash-fig4.png" width="300px"></img>
 
-## DASH (wip)
+## DASH
 
 Implementation of DASH, [Warm-Starting Neural Network Training in Stationary Settings without Loss of Plasticity](https://arxiv.org/abs/2410.23495)
 
