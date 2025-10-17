@@ -17,3 +17,23 @@ def test_dash():
     optim.shrink_params()
 
     optim.clear_grad_ema()
+
+def test_shrink_with_dataset():
+    from torch.utils.data import Dataset
+    from DASH.DASH import AdamW, shrink_params_with_dataset_
+
+    from torch.nn import Linear, Sequential
+    from einops.layers.torch import Reduce
+
+    class MockDataset(Dataset):
+        def __len__(self):
+            return 100
+
+        def __getitem__(self, idx):
+            return torch.randn(10)
+
+    net = Sequential(Linear(10, 1), Reduce('... ->', 'sum'))
+
+    dataset = MockDataset()
+
+    shrink_params_with_dataset_(net, dataset)

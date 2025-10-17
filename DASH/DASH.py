@@ -35,7 +35,7 @@ class AdamW(Optimizer):
         grad_ema = True,
         grad_ema_decay = 0.98,
     ):
-        assert lr > 0.
+        assert lr >= 0.
         assert all([0. <= beta <= 1. for beta in betas])
         assert weight_decay >= 0.
         assert regen_reg_rate >= 0.
@@ -191,16 +191,25 @@ class AdamW(Optimizer):
 
 def shrink_params_with_dataset_(
     network: Module,
-    optim: AdamW,
     dataset: Dataset,
-    batch_size = 16
+    optim: AdamW | None = None,
+    batch_size = 16,
+    network_forward_kwargs: dict = dict()
 ):
     dl = DataLoader(dataset, batch_size = batch_size)
 
+    if not exists(optim):
+        optim = AdamW(network.parameters(), lr = 0.)
+
     optim.clear_grad_ema()
 
-    for batches in dl:
-        loss = network(dl)
+    for inputs in dl:
+
+        if isinstance(inputs, dict):
+            loss = network(**inputs, **network_forward_kwargs)
+        else:
+            loss = network(inputs, **network_forward_kwargs)
+
         loss.backward()
 
         optim.step(only_update_grad_ema = True)
